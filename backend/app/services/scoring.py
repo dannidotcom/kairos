@@ -7,8 +7,31 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import ICP, Lead, Signal
 from app.services.llm import LLMError, score_profile_with_llm
+
+
+def score_profile_with_rules(profile: dict[str, Any] | Lead | None = None, icp: dict[str, Any] | ICP | None = None) -> dict[str, Any]:
+    if not profile or not icp:
+        return {"score": 0, "justification": "Aucun critère vérifié disponible.", "signals_used": []}
+    score = 0
+    signals: list[str] = []
+    profile_data = profile if isinstance(profile, dict) else getattr(profile, "__dict__", {})
+    icp_data = icp if isinstance(icp, dict) else getattr(icp, "__dict__", {})
+    for field_name in ("industry", "company_size", "location", "headline"):
+        icp_values = icp_data.get(field_name, []) if isinstance(icp_data.get(field_name, []), list) else []
+        if icp_values and profile_data.get(field_name) in icp_values:
+            score += 25
+            signals.append(field_name)
+    score = max(0, min(100, score))
+    return {
+        "score": score,
+        "justification": "Critères vérifiés issus du profil et de l’ICP." if score else "Aucun critère vérifié disponible.",
+        "signals_used": signals,
+    }
 
 
 @dataclass(slots=True)
@@ -67,6 +90,50 @@ async def score_lead_with_llm_and_rules(
         reason=llm_reason,
         signals_used=llm_signals or signal_titles,
     )
+
+
+async def rescore_lead(session: AsyncSession, lead: Lead, *, locale: str | None = None, signal: Signal | None = None) -> tuple[int, list[dict[str, Any]], Any | None]:
+    icps = (
+        await session.execute(
+            select(ICP).where(ICP.organization_id == lead.organization_id, ICP.is_active.is_(True))
+        )
+    ).scalars().all()
+    if lead.icp_id:
+        icps = [await session.get(ICP, lead.icp_id)] + [item for item in icps if item and item.id != lead.icp_id]
+    icps = [item for item in icps if item is not None]
+    best_icp = None
+    best_score = 0
+    reasons: list[dict[str, Any]] = []
+    for icp in icps:
+        score, reason = score_lead(lead, icp, signal)
+        if score > best_score:
+            best_score = score
+            best_icp = icp
+            reasons = [{"key": "verified_fit", "label": "Correspondance vérifiée", "detail": reason, "points": score}]
+    lead.icp_score = int(best_score)
+    lead.score_reasons = reasons
+    lead.icp_id = best_icp.id if best_icp else lead.icp_id
+    return int(best_score), reasons, best_icp.id if best_icp else None
+
+
+def score_lead(lead: Lead, icp: ICP, signal: Signal | None = None) -> tuple[int, str]:
+    profile = {
+        "industry": getattr(lead, "industry", None) or getattr(lead, "tags", None),
+        "company_size": getattr(lead, "company_size", None),
+        "location": getattr(lead, "location", None),
+        "headline": getattr(lead, "headline", None),
+    }
+    icp_profile = {
+        "industry": getattr(icp, "industries", []) or [],
+        "company_size": getattr(icp, "company_sizes", []) or [],
+        "location": getattr(icp, "locations", []) or [],
+        "headline": getattr(icp, "titles", []) or [],
+    }
+    result = score_profile_with_rules(profile=profile, icp=icp_profile)
+    if signal is not None:
+        weight = getattr(signal, "weight", 0) or getattr(signal, "score", 0) or 0
+        result["score"] = min(100, result["score"] + int(float(weight) * 20))
+    return int(result["score"]), str(result["justification"])
 
 
 def is_hot_lead(score: int, threshold: int = 70) -> bool:

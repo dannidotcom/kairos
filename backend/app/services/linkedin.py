@@ -184,7 +184,7 @@ class UnipileProvider(LinkedInProvider):
         self.max_retries = max(1, int(settings.unipile_max_retries or 5))
         self.headers = {"Content-Type": "application/json"}
         if self.api_key:
-            self.headers["Authorization"] = f"Bearer {self.api_key}"
+            self.headers["X-API-Key"] = self.api_key
 
     async def _request(self, method: str, path: str, *, params: Mapping[str, Any] | None = None, json_body: Any = None) -> dict[str, Any]:
         if not self.base_url:
@@ -372,7 +372,7 @@ class ConnectorLinkedInProvider(LinkedInProvider):
             "message": message,
         }
         headers = {
-            "Authorization": f"Bearer {settings.linkedin_connector_token}",
+            "Authorization": f"Bearer {settings.linkedin_connector_token}" if settings.linkedin_connector_token else "",
             "Idempotency-Key": str(action_id),
             "content-type": "application/json",
         }

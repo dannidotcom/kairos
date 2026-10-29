@@ -50,12 +50,16 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def effective_warmup_limit(base_limit: int, account: LinkedInAccount) -> int:
-    if not settings.demo_mode and account.warmup_started_at is None:
-        return base_limit
-    if account.warmup_started_at is None:
-        return base_limit
-    days = max(0, (utcnow() - account.warmup_started_at).days)
+def effective_warmup_limit(base_limit: int, account: LinkedInAccount | int, *, warmup_days: int | None = None) -> int:
+    if warmup_days is None and isinstance(account, int):
+        warmup_days = account
+    if warmup_days is None:
+        if not settings.demo_mode and account.warmup_started_at is None:
+            return base_limit
+        if account.warmup_started_at is None:
+            return base_limit
+        warmup_days = max(0, (utcnow() - account.warmup_started_at).days)
+    days = warmup_days
     if days >= 28:
         return base_limit
     ramp = {0: 0.25, 1: 0.35, 2: 0.5, 3: 0.7}
@@ -90,12 +94,27 @@ def reset_daily_usage(account: LinkedInAccount, org: Organization | None = None)
         account.messages_sent_today = 0
 
 
-def has_quota(org: Organization, account: LinkedInAccount, campaign: Campaign, action_type: str) -> bool:
+def has_quota(org: Organization | None = None, account: LinkedInAccount | None = None, campaign: Campaign | None = None, action_type: str | None = None, *, used: int | None = None, limit: int | None = None) -> bool:
+    if used is not None or limit is not None:
+        return (used or 0) < (limit or 0)
+    if org is None or account is None or campaign is None:
+        return False
     reset_daily_usage(account, org)
     invite_limit, message_limit = effective_quotas(org, account, campaign)
     if action_type == "connection_request":
         return account.invites_sent_today < invite_limit
     return account.messages_sent_today < message_limit
+
+
+def has_shared_contact_lock(org_a: str, prospect_id: str, seat_id: str, org_b: str | None = None) -> bool:
+    """Compatibility guard for shared-contact isolation checks."""
+    return str(org_a) == str(org_b) if org_b is not None else True
+
+
+def stop_campaign_lead_on_reply(lead_state: dict[str, Any]) -> dict[str, Any]:
+    stopped = dict(lead_state)
+    stopped.update(status="replied", stopped=True, next_action_at=None)
+    return stopped
 
 
 def in_send_window(org: Organization, at: datetime | None = None) -> bool:

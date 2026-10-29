@@ -14,15 +14,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState<'form' | 'demo' | null>(null); const [error, setError] = useState('');
   const [form, setForm] = useState({ email: '', password: '', full_name: '', organization_name: '' });
   if (sessionLoading) return <div className="flex min-h-screen items-center justify-center"><Spinner /></div>;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/app" replace />;
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setError(''); setLoading('form');
-    try { if (mode === 'login') await login({ email: form.email, password: form.password }); else await register({ ...form, locale }); toast(t('login.connected')); navigate('/'); }
+    try { if (mode === 'login') await login({ email: form.email, password: form.password }); else await register({ ...form, locale }); toast(t('login.connected')); navigate('/app'); }
     catch (err) { setError(err instanceof Error ? err.message : t('error')); }
     finally { setLoading(null); }
   };
-  const demo = async () => { setError(''); setLoading('demo'); try { await demoLogin(); navigate('/'); } catch (err) { setError(err instanceof Error ? err.message : t('error')); } finally { setLoading(null); } };
+  const demo = async () => { setError(''); setLoading('demo'); try { await demoLogin(); navigate('/app'); } catch (err) { setError(err instanceof Error ? err.message : t('error')); } finally { setLoading(null); } };
   return <div className="grid min-h-screen bg-white lg:grid-cols-[1.08fr_1fr]">
     <section className="relative hidden overflow-hidden bg-brand-indigo px-14 py-10 text-white lg:flex lg:flex-col xl:px-20 xl:py-12">
       <div className="pointer-events-none absolute -right-32 -top-32 size-[440px] rounded-full border border-white/[.055]" /><div className="pointer-events-none absolute -right-16 -top-16 size-[300px] rounded-full border border-white/[.055]" /><div className="pointer-events-none absolute -bottom-52 -left-24 size-[420px] rounded-full border border-white/[.04]" />
