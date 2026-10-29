@@ -1,252 +1,212 @@
+
 from __future__ import annotations
 
-import re
-from typing import Any
-from uuid import UUID
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import random
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from typing import Any, Sequence
+from zoneinfo import ZoneInfo
 
 from app.models import ICP, Lead, Signal
-
-TITLE_POINTS = 28
-INDUSTRY_POINTS = 15
-KEYWORD_POINTS = 17
-LOCATION_POINTS = 10
-SIZE_POINTS = 10
-SENIORITY_POINTS = 10
-SIGNAL_POINTS = 10
-
-SENIORITY_TERMS = {
-    "c-level": ["ceo", "cto", "cfo", "cmo", "coo", "cro", "chief", "founder", "président", "directeur général"],
-    "vp": ["vp", "vice president", "vice-président"],
-    "head": ["head of", "head ", "responsable"],
-    "director": ["director", "directeur", "directrice"],
-    "manager": ["manager", "responsable"],
-    "founder": ["founder", "co-founder", "cofondateur", "fondateur"],
-}
+from app.services.llm import LLMError, score_profile_with_llm
 
 
-def _contains_any(haystack: str, needles: list[str] | None) -> tuple[bool, str | None]:
-    if not haystack or not needles:
-        return False, None
-    for needle in needles:
-        cleaned = str(needle).strip().lower()
-        if cleaned and cleaned in haystack:
-            return True, needle
-    return False, None
+@dataclass(slots=True)
+class DeterministicScore:
+    score: int
+    reasons: list[dict[str, Any]] = field(default_factory=list)
 
 
-def _parse_range(value: str | None) -> tuple[int, int] | None:
-    if not value:
-        return None
-    numbers = re.findall(r"\d+", value.replace(" ", ""))
-    if len(numbers) >= 2:
-        return int(numbers[0]), int(numbers[1])
-    if len(numbers) == 1:
-        return int(numbers[0]), int(numbers[0])
-    labels = {
-        "startup": (1, 50),
-        "scale-up": (51, 500),
-        "scaleup": (51, 500),
-        "pme": (11, 250),
-        "sme": (11, 250),
-        "eti": (250, 5000),
-        "enterprise": (1000, 100000),
-        "grand groupe": (1000, 100000),
-    }
-    lower = value.lower()
-    for label, bounds in labels.items():
-        if label in lower:
-            return bounds
-    return None
+@dataclass(slots=True)
+class CombinedLeadScore:
+    deterministic_score: int
+    llm_score: int | None = None
+    final_score: int = 0
+    reason: str = ""
+    signals_used: list[str] = field(default_factory=list)
 
 
-def _size_matches(icp_sizes: list[str] | None, lead_size: str | None) -> bool:
-    if not icp_sizes:
-        return False
-    lead_range = _parse_range(lead_size)
-    if lead_range is None:
-        return False
-    for size in icp_sizes:
-        target = _parse_range(size)
-        if target and not (lead_range[1] < target[0] or lead_range[0] > target[1]):
-            return True
-        if size.lower() in (lead_size or "").lower():
-            return True
-    return False
-
-
-def _seniority_matches(icp_seniorities: list[str] | None, headline: str) -> str | None:
-    if not icp_seniorities:
-        return None
-    for seniority in icp_seniorities:
-        terms = SENIORITY_TERMS.get(seniority.strip().lower(), [seniority.lower()])
-        if any(term in headline for term in terms):
-            return seniority
-    return None
-
-
-def score_lead(lead: Lead, icp: ICP, signal: Signal | None = None, locale: str = "fr") -> tuple[int, list[dict[str, Any]]]:
-    reasons: list[dict[str, Any]] = []
-    score = 0
-    headline = (lead.headline or "").lower()
-    company = (lead.company or "").lower()
-    industry = (lead.industry or "").lower()
-    location = (lead.location or "").lower()
-    profile_text = " ".join(
-        [
-            lead.headline or "",
-            lead.about or "",
-            lead.company or "",
-            lead.industry or "",
-            " ".join(lead.tags or []),
-        ]
-    ).lower()
-
-    title_hit, title_value = _contains_any(headline, icp.titles)
-    if title_hit:
-        score += TITLE_POINTS
-        reasons.append(
-            {
-                "key": "title",
-                "label": "Fonction cible" if locale == "fr" else "Target role",
-                "detail": title_value,
-                "points": TITLE_POINTS,
-            }
-        )
-
-    industry_hit, industry_value = _contains_any(f"{industry} {company}", icp.industries)
-    if industry_hit:
-        score += INDUSTRY_POINTS
-        reasons.append(
-            {
-                "key": "industry",
-                "label": "Secteur aligné" if locale == "fr" else "Industry match",
-                "detail": industry_value,
-                "points": INDUSTRY_POINTS,
-            }
-        )
-
-    matched_keywords: list[str] = []
-    for keyword in icp.keywords or []:
-        if str(keyword).lower() in profile_text:
-            matched_keywords.append(keyword)
-    if matched_keywords:
-        points = min(KEYWORD_POINTS, 4 + (len(matched_keywords) - 1) * 4)
-        score += points
-        reasons.append(
-            {
-                "key": "keywords",
-                "label": "Mots-clés présents" if locale == "fr" else "Keywords found",
-                "detail": ", ".join(matched_keywords[:3]),
-                "points": points,
-            }
-        )
-
-    location_hit, location_value = _contains_any(location, icp.locations)
-    if location_hit:
-        score += LOCATION_POINTS
-        reasons.append(
-            {
-                "key": "location",
-                "label": "Zone géographique" if locale == "fr" else "Location",
-                "detail": location_value,
-                "points": LOCATION_POINTS,
-            }
-        )
-
-    if _size_matches(icp.company_sizes, lead.company_size):
-        score += SIZE_POINTS
-        reasons.append(
-            {
-                "key": "company_size",
-                "label": "Taille d'entreprise" if locale == "fr" else "Company size",
-                "detail": lead.company_size,
-                "points": SIZE_POINTS,
-            }
-        )
-
-    seniority_hit = _seniority_matches(icp.seniorities, headline)
-    if seniority_hit:
-        score += SENIORITY_POINTS
-        reasons.append(
-            {
-                "key": "seniority",
-                "label": "Niveau de décision" if locale == "fr" else "Seniority",
-                "detail": seniority_hit,
-                "points": SENIORITY_POINTS,
-            }
-        )
-
-    if signal and signal.strength > 0:
-        points = max(2, round(SIGNAL_POINTS * float(signal.strength)))
-        score += points
-        reasons.append(
-            {
-                "key": "signal",
-                "label": "Signal d'achat" if locale == "fr" else "Buying signal",
-                "detail": signal.title,
-                "points": points,
-            }
-        )
-
-    return max(0, min(100, score)), sorted(reasons, key=lambda item: item["points"], reverse=True)
-
-
-async def rescore_lead(
-    session: AsyncSession,
-    lead: Lead,
-    locale: str = "fr",
-    signal: Signal | None = None,
+async def score_lead_with_llm_and_rules(
     *,
-    commit: bool = False,
-) -> tuple[int, list[dict[str, Any]], UUID | None]:
-    icps = (
-        await session.execute(select(ICP).where(ICP.organization_id == lead.organization_id, ICP.is_active.is_(True)))
-    ).scalars().all()
-    if not icps:
-        lead.icp_score = 0
-        lead.score_reasons = []
-        if commit:
-            await session.commit()
-        return 0, [], None
-    if signal is None:
-        signal = (
-            await session.execute(
-                select(Signal)
-                .where(Signal.lead_id == lead.id)
-                .order_by(Signal.detected_at.desc())
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-    best_score = -1
-    best_reasons: list[dict[str, Any]] = []
-    best_icp_id: UUID | None = None
-    for icp in icps:
-        score, reasons = score_lead(lead, icp, signal, locale=locale)
-        if score > best_score:
-            best_score = score
-            best_reasons = reasons
-            best_icp_id = icp.id
-    lead.icp_score = max(0, best_score)
-    lead.score_reasons = best_reasons
-    lead.icp_id = best_icp_id
-    if signal is not None:
-        lead.last_signal_at = signal.detected_at
-    if commit:
-        await session.commit()
-    return lead.icp_score, lead.score_reasons, lead.icp_id
+    lead: Lead,
+    icp: ICP,
+    signal_list: Sequence[Signal] | None = None,
+    deterministic_score: int | None = None,
+    context: dict[str, Any] | None = None,
+    llm_weight: float = 0.4,
+) -> CombinedLeadScore:
+    signal_titles = [signal.title for signal in (signal_list or []) if getattr(signal, "title", None)]
+    if deterministic_score is None:
+        from app.services.scoring import score_lead
 
-
-async def icp_match_for_lead(session: AsyncSession, lead: Lead) -> ICP | None:
-    if lead.icp_id:
-        return await session.get(ICP, lead.icp_id)
-    return (
-        await session.execute(
-            select(ICP)
-            .where(ICP.organization_id == lead.organization_id, ICP.is_active.is_(True))
-            .order_by(ICP.created_at.asc())
-            .limit(1)
+        deterministic_score, _ = score_lead(lead, icp, signal=(signal_list[0] if signal_list else None))
+    fallback_reason = "Score déterministe combiné à l’analyse IA."
+    llm_score = None
+    llm_reason = fallback_reason
+    llm_signals: list[str] = []
+    try:
+        llm_result = await score_profile_with_llm(
+            lead=lead,
+            icp=icp,
+            signal_titles=signal_titles,
+            context=context,
         )
-    ).scalar_one_or_none()
+        llm_score = llm_result.score
+        llm_reason = llm_result.justification
+        llm_signals = llm_result.signals_used
+    except LLMError:
+        llm_score = deterministic_score
+        llm_reason = fallback_reason
+
+    final_score = int(round((1.0 - llm_weight) * deterministic_score + llm_weight * (llm_score or deterministic_score)))
+    final_score = max(0, min(100, final_score))
+    return CombinedLeadScore(
+        deterministic_score=deterministic_score,
+        llm_score=llm_score,
+        final_score=final_score,
+        reason=llm_reason,
+        signals_used=llm_signals or signal_titles,
+    )
+
+
+def is_hot_lead(score: int, threshold: int = 70) -> bool:
+    return score >= threshold
+
+
+def build_icebreaker(lead: Lead, signal_list: Sequence[Signal] | None = None, *, max_chars: int = 300) -> str:
+    signal_text = ", ".join(signal.title for signal in (signal_list or []) if getattr(signal, "title", None))
+    base = f"Bonjour {lead.first_name or lead.full_name.split()[0] if lead.full_name else 'there'},"
+    if lead.company:
+        base += f" j’ai vu que vous travaillez chez {lead.company}."
+    if lead.headline:
+        base += f" Votre rôle {lead.headline} m’a interpellé."
+    if signal_text:
+        base += f" Les signaux récents ({signal_text[:120]}) renforcent l’intérêt."
+    base += " Je pense que nous pouvons créer un vrai bénéfice mutuel."
+    return base[:max_chars]
+
+
+def within_send_window(account_tz: str | None, now_utc: datetime | None = None) -> bool:
+    now_utc = now_utc or datetime.now(timezone.utc)
+    tz = ZoneInfo(account_tz or "Europe/Paris")
+    local_now = now_utc.astimezone(tz)
+    return 8 <= local_now.hour <= 19
+
+
+def next_action_delay(action_type: str, *, base_minutes: int = 30) -> int:
+    jitter = random.randint(0, 15)
+    mapping = {"invite": 60, "message": 90, "follow_up": 120}
+    return max(base_minutes, mapping.get(action_type, base_minutes) + jitter)
+
+
+def campaign_send_windows_for_timezone(tz_name: str | None) -> tuple[int, int]:
+    tz = ZoneInfo(tz_name or "Europe/Paris")
+    local_now = datetime.now(tz)
+    return (8, 19) if local_now.weekday() < 5 else (9, 17)
+
+
+@dataclass(slots=True)
+class CampaignActionPlan:
+    step_name: str
+    due_at: datetime
+    action_type: str
+    payload: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class CampaignLaunchPlan:
+    campaigns: list[str] = field(default_factory=list)
+    next_actions: list[CampaignActionPlan] = field(default_factory=list)
+    requires_manual_approval: bool = False
+
+
+def build_campaign_sequence(
+    *,
+    campaign_name: str,
+    lead: Lead,
+    signal_list: Sequence[Signal] | None = None,
+    now: datetime | None = None,
+    timezone_name: str | None = None,
+) -> CampaignLaunchPlan:
+    now = now or datetime.now(timezone.utc)
+    steps = [
+        ("invite", "invitation"),
+        ("message", "message"),
+        ("follow_up", "follow_up"),
+    ]
+    actions: list[CampaignActionPlan] = []
+    icebreaker = build_icebreaker(lead, signal_list)
+    for idx, (step_name, action_type) in enumerate(steps, start=1):
+        delay = timedelta(minutes=next_action_delay(action_type)) * idx
+        due_at = now + delay
+        actions.append(
+            CampaignActionPlan(
+                step_name=step_name,
+                due_at=due_at,
+                action_type=action_type,
+                payload={
+                    "lead_id": str(lead.id),
+                    "icebreaker": icebreaker,
+                    "campaign_name": campaign_name,
+                    "timezone": timezone_name or "Europe/Paris",
+                },
+            )
+        )
+    return CampaignLaunchPlan(campaigns=[campaign_name], next_actions=actions, requires_manual_approval=False)
+
+
+def require_manual_approval_for_campaign(campaign_name: str, *, enabled: bool = False) -> bool:
+    return enabled
+
+
+def mark_campaign_paused(campaign_state: dict[str, Any], value: bool) -> dict[str, Any]:
+    campaign_state["paused"] = value
+    campaign_state["updated_at"] = datetime.now(timezone.utc)
+    return campaign_state
+
+
+def mark_campaign_archived(campaign_state: dict[str, Any]) -> dict[str, Any]:
+    campaign_state["archived"] = True
+    campaign_state["paused"] = True
+    return campaign_state
+
+
+def lock_contact_for_week(org_id: str, prospect_id: str, seat_id: str, week_key: str, locks: dict[str, set[str]]) -> bool:
+    key = f"{org_id}:{week_key}"
+    locked = locks.setdefault(key, set())
+    contact_key = f"{seat_id}:{prospect_id}"
+    if contact_key in locked:
+        return False
+    locked.add(contact_key)
+    return True
+
+
+def can_send_action(account: Any, action_type: str, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    if not hasattr(account, "status"):
+        return True
+    if getattr(account, "status", None) not in {"connected", "warming"}:
+        return False
+    if not within_send_window(getattr(account, "timezone", None), now):
+        return False
+    return True
+
+
+__all__ = [
+    "DeterministicScore",
+    "CombinedLeadScore",
+    "score_lead_with_llm_and_rules",
+    "is_hot_lead",
+    "build_icebreaker",
+    "within_send_window",
+    "next_action_delay",
+    "campaign_send_windows_for_timezone",
+    "CampaignActionPlan",
+    "CampaignLaunchPlan",
+    "build_campaign_sequence",
+    "require_manual_approval_for_campaign",
+    "mark_campaign_paused",
+    "mark_campaign_archived",
+    "lock_contact_for_week",
+    "can_send_action",
+]
