@@ -109,6 +109,39 @@ function HeroMockup({ t }: { t: LocaleCopy }) { return <div className="hero-mock
 
 export default function LandingPage() {
     const { locale, setLocale } = useI18n(); const t = copy[locale]; const [mobile, setMobile] = useState(false); const [annual, setAnnual] = useState(true); const [scrolled, setScrolled] = useState(false);
+    const [activeSection, setActiveSection] = useState(window.location.hash || '#how');
+    useEffect(() => {
+        const sectionIds = ['#how', '#signals', '#security', '#pricing', '#faq'];
+        let hashLockedUntil = 0;
+        const syncHash = () => {
+            const hash = window.location.hash;
+            setActiveSection(hash || '#how');
+            if (sectionIds.includes(hash)) hashLockedUntil = performance.now() + 1400;
+        };
+        let frame = 0;
+        const updateFromScroll = () => {
+            if (frame || performance.now() < hashLockedUntil) return;
+            frame = window.requestAnimationFrame(() => {
+                frame = 0;
+                const marker = window.scrollY + window.innerHeight * 0.35;
+                let current = '#how';
+                sectionIds.forEach((hash) => {
+                    const section = document.querySelector(hash);
+                    if (section && section.getBoundingClientRect().top + window.scrollY <= marker) current = hash;
+                });
+                setActiveSection(current);
+            });
+        };
+        window.addEventListener('hashchange', syncHash);
+        window.addEventListener('scroll', updateFromScroll, { passive: true });
+        syncHash();
+        updateFromScroll();
+        return () => {
+            window.removeEventListener('hashchange', syncHash);
+            window.removeEventListener('scroll', updateFromScroll);
+            if (frame) window.cancelAnimationFrame(frame);
+        };
+    }, []);
     useEffect(() => {
         gsap.registerPlugin(ScrollTrigger);
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -121,9 +154,15 @@ export default function LandingPage() {
         gsap.utils.toArray<HTMLElement>('[data-reveal]').forEach((el) => gsap.fromTo(el, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: .85, ease: 'cubic-bezier(0.22,1,0.36,1)', scrollTrigger: { trigger: el, start: 'top 86%', once: true } }));
         return () => { window.removeEventListener('scroll', update); gsap.ticker.remove((time) => lenis.raf(time * 1000)); lenis.destroy(); ScrollTrigger.getAll().forEach(t => t.kill()) };
     }, []);
+    useEffect(() => {
+        if (!mobile) return;
+        const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobile(false); };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [mobile]);
     useEffect(() => { document.title = locale === 'fr' ? 'Kairos — Le bon message, au bon moment.' : 'Kairos — The right message, at the right moment.'; document.documentElement.lang = locale; const description = locale === 'fr' ? "Kairos détecte les signaux d'achat LinkedIn et lance une prospection B2B au bon moment." : "Kairos detects LinkedIn buying signals and launches B2B outreach at the right moment."; let meta = document.querySelector('meta[name="description"]'); if (meta) meta.setAttribute('content', description); meta = document.querySelector('meta[property="og:description"]'); if (meta) meta.setAttribute('content', description) }, [locale]);
     const nav = [['#how'], ['#signals'], ['#security'], ['#pricing'], ['#faq']] as const;
-    return <div className="landing"><div className="reading-progress" aria-hidden="true"><div className="reading-progress-bar" /></div><div className="landing-grain" aria-hidden="true" /><header className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`}><div className="landing-container nav-inner"><Link to="/" aria-label="Kairos"><Logo variant="full" theme="dark" size={32} /></Link><nav aria-label="Navigation principale">{t.nav.map((label, i) => <a href={nav[i][0]} key={label}>{label}</a>)}</nav><div className="nav-actions"><button className="landing-icon" onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')} aria-label="Change language"><Languages size={17} /><span>{locale.toUpperCase()} </span></button><ThemeToggle /><Link className="nav-login" to="/login">{t.login}</Link><Link className="landing-button amber small" to="/login">{t.trial}</Link><button className="mobile-menu landing-icon" onClick={() => setMobile(!mobile)} aria-label="Menu">{mobile ? <X /> : <Menu />}</button></div></div>{mobile && <nav className="mobile-nav">{t.nav.map((label, i) => <a key={label} onClick={() => setMobile(false)} href={nav[i][0]}>{label}</a>)}<Link to="/login">{t.login}</Link></nav>}</header>
+    return <div className="landing"><div className="reading-progress" aria-hidden="true"><div className="reading-progress-bar" /></div><div className="landing-grain" aria-hidden="true" /><header className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`}><div className="landing-container nav-inner"><Link to="/" aria-label="Kairos"><Logo variant="full" theme="dark" size={32} /></Link><nav aria-label="Navigation principale">{t.nav.map((label, i) => { const hash = nav[i][0]; const active = activeSection === hash; return <a href={hash} key={label} className={active ? 'active' : ''} aria-current={active ? 'location' : undefined} onClick={() => setActiveSection(hash)}>{label}</a>; })}</nav><div className="nav-actions"><button className="landing-icon" onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')} aria-label="Change language"><Languages size={17} /><span>{locale.toUpperCase()} </span></button><ThemeToggle /><Link className="nav-login" to="/login">{t.login}</Link><Link className="landing-button amber small" to="/login">{t.trial}</Link><button className="mobile-menu landing-icon" onClick={() => setMobile(!mobile)} aria-label={mobile ? 'Fermer le menu' : 'Ouvrir le menu'} aria-expanded={mobile} aria-controls="mobile-navigation">{mobile ? <X /> : <Menu />}</button></div></div>{mobile && <nav id="mobile-navigation" className="mobile-nav" aria-label="Navigation mobile">{t.nav.map((label, i) => { const hash = nav[i][0]; const active = activeSection === hash; return <a key={label} className={active ? 'active' : ''} aria-current={active ? 'location' : undefined} onClick={() => { setActiveSection(hash); setMobile(false); }} href={hash}><span>{label}</span><ArrowRight size={16} /></a>; })}<div className="mobile-nav-actions"><Link className="nav-login" to="/login">{t.login}</Link><Link className="landing-button amber small" to="/login" onClick={() => setMobile(false)}>{t.trial}</Link></div></nav>}</header>
         <main><section className="hero landing-container"><motion.div className="hero-copy" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}><div className="eyebrow"><Radar size={14} />{t.heroEyebrow}</div><h1><span>{locale === 'fr' ? 'Le bon message, au' : 'The right message, at'}</span><em>{locale === 'fr' ? 'bon moment.' : 'the right moment.'}</em></h1><p>{t.heroSub}</p><div className="hero-actions"><Link className="landing-button amber" to="/login">{t.trial}<ArrowRight size={17} /></Link><a className="landing-button ghost" href="#how">{t.watch}</a></div></motion.div><motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .65 }}><HeroMockup t={t} /></motion.div></section>
             <div className="signal-marquee" aria-label="Signaux d’achat">
                 <div className="signal-marquee-track">{[...t.signals, ...t.signals].map((signal, i) => <span key={`${signal}-${i}`}><Radar size={14} />{signal}</span>)}</div>

@@ -76,8 +76,10 @@ button:disabled { cursor: not-allowed; }
   .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-[.06em] text-slate-500; }
   .badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium; }
   .icon-btn { @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-brand-indigo; }
-  .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[.07] hover:text-white; }
-  .nav-link.active { @apply bg-white/[.1] text-white shadow-inner; }
+  .nav-link { @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors duration-200 hover:bg-white/[.07] hover:text-white; }
+  .nav-link.active { @apply bg-white/[.1] font-semibold text-white shadow-inner; }
+  .nav-link.active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; border-radius: 999px; background: var(--brand-amber); box-shadow: 0 0 12px rgba(245, 158, 11, .28); transform-origin: left; animation: nav-active-in 220ms var(--kairos-ease); }
+  @keyframes nav-active-in { from { transform: scaleX(.35); opacity: .5; } to { transform: scaleX(1); opacity: 1; } }
   .th { @apply px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400; }
   .td { @apply px-5 py-4 text-sm; }
 }

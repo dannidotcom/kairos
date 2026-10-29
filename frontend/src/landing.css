@@ -1459,8 +1459,20 @@ html.lenis body {
     transition: right .3s
 }
 
-.landing-nav nav a:hover:after {
+.landing-nav nav a:hover:after,
+.landing-nav nav a.active:after {
     right: 0
+}
+
+.landing-nav nav a.active {
+    color: var(--landing-text);
+    font-weight: 800;
+    background: var(--landing-glass)
+}
+
+.mobile-nav a.active {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, .07)
 }
 
 .hero {
@@ -2067,4 +2079,18 @@ html.lenis body {
 .signal-controls{height:48px;display:flex;align-items:center;justify-content:center;gap:18px}.signal-arrow{width:42px;height:42px;border-radius:50%;border:1px solid var(--landing-line);background:var(--landing-glass);color:var(--landing-text);display:grid;place-items:center;transition:.25s}.signal-arrow:hover:not(:disabled){border-color:rgba(245,158,11,.5);color:#F59E0B}.signal-arrow:disabled{opacity:.35}.signal-dots{display:flex;align-items:center;gap:7px}.signal-dots button{width:7px;height:7px;border:0;border-radius:999px;padding:0;background:var(--landing-line);transition:width .35s cubic-bezier(.22,1,.36,1),background .35s}.signal-dots button.is-active{width:28px;background:#F59E0B}
 @media(max-width:900px){.signals-section{padding-block:100px}.signals-header{margin-bottom:34px}.signal-stage{grid-template-columns:1fr;gap:28px}.signal-stage:before{display:none}.signal-intro{min-height:auto;padding:0 0 0 24px;border-left:1px solid rgba(245,158,11,.28)}.signal-intro-mark{right:auto;left:-20px;top:-18px}.signal-intro>p:not(.signal-kicker){max-width:620px}.signal-example{max-width:520px}.signal-track{margin-right:-24px;padding-right:24px}.signal-card-premium{flex-basis:min(300px,78vw)}}
 @media(max-width:600px){.signals-section{padding-block:82px}.signals-header{align-items:flex-end;margin-bottom:28px}.signals-header .section-heading{gap:12px}.signals-header .section-heading>span{padding-top:5px}.signals-header h2{font-size:38px!important;line-height:1.02!important;max-width:260px}.signals-eyebrow{font-size:9px;margin-bottom:8px}.signal-counter{min-width:70px}.signal-counter strong{font-size:38px}.signal-stage{gap:24px}.signal-intro{padding-left:20px}.signal-intro h3{font-size:28px}.signal-intro>p:not(.signal-kicker){font-size:14px}.signal-example{margin-top:18px}.signal-example p{font-size:16px!important}.signal-track{margin-right:-16px;padding-right:16px}.signal-card-premium{flex-basis:82vw;height:350px}.signal-controls{justify-content:space-between}.signal-dots{max-width:190px;overflow:hidden}.signal-card-body h3{font-size:19px}}
+/* Refined floating navigation */
+.landing-nav{position:fixed;left:50%;width:min(1160px,calc(100% - 28px));margin-inline:0;transform:translateX(-50%);height:68px;top:12px;border-radius:20px;background:color-mix(in srgb,var(--landing-bg) 88%,transparent);border-color:var(--landing-line);box-shadow:0 10px 34px rgba(0,0,0,.12);backdrop-filter:blur(24px) saturate(140%)}
+.landing-nav.is-scrolled{top:8px;box-shadow:0 16px 44px rgba(0,0,0,.22)}
+.nav-inner{position:relative;width:calc(100% - 32px);height:68px}.landing-nav.is-scrolled .nav-inner{height:58px}
+.nav-inner>a{position:relative;z-index:2;display:flex;align-items:center}
+.landing-nav nav{position:absolute;left:50%;margin-left:0;transform:translateX(-50%);gap:6px;padding:5px;border:1px solid transparent;border-radius:999px}.landing-nav nav a{position:relative;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:700}.landing-nav nav a:after{content:'';position:absolute;left:50%;right:auto;bottom:-2px;width:0;height:2px;border-radius:999px;background:#F59E0B;transform:translateX(-50%);transition:width .25s cubic-bezier(.22,1,.36,1)}.landing-nav nav a.active:after,.landing-nav nav a:hover:after{width:16px}.landing-nav nav a:hover{color:var(--landing-text);background:var(--landing-glass)}
+.nav-actions{position:relative;z-index:2;margin-left:auto;gap:7px}.landing-icon{height:36px;min-width:36px;border-radius:10px;cursor:pointer}.landing-icon:hover{border-color:rgba(245,158,11,.35);color:#F59E0B}.landing-icon:focus-visible,.nav-actions a:focus-visible,.landing-nav nav a:focus-visible,.mobile-nav a:focus-visible{outline:2px solid #F59E0B;outline-offset:3px}.nav-login{font-weight:700}.landing-button.small{border-radius:10px}
+.mobile-nav{position:fixed!important;top:80px!important;left:8px!important;right:8px!important;bottom:auto!important;transform:none!important;z-index:60;width:auto!important;flex-direction:column;max-height:calc(100vh - 96px);overflow-y:auto;display:none;padding:10px!important;border:1px solid var(--landing-line)!important;border-radius:18px!important;background:color-mix(in srgb,var(--landing-bg) 96%,transparent)!important;box-shadow:0 24px 70px rgba(0,0,0,.38)!important;backdrop-filter:blur(24px)}
+.mobile-nav a{min-height:48px;display:flex;align-items:center;justify-content:space-between!important;padding:0 14px!important;border-bottom:1px solid var(--landing-line)!important;font-weight:700}.mobile-nav a svg{opacity:.55}.mobile-nav-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:10px}.mobile-nav-actions .nav-login{display:flex!important;align-items:center;justify-content:center;border:1px solid var(--landing-line);border-radius:10px}.mobile-nav-actions .landing-button{width:100%}
+.mobile-nav a.active{position:relative}.mobile-nav a.active:after{content:'';position:absolute;left:14px;right:14px;bottom:0;height:2px;border-radius:999px;background:#F59E0B}
+@media(max-width:1100px){.landing-nav nav{gap:2px}.landing-nav nav a{padding-inline:7px;font-size:11px}.nav-login{display:none}}
+@media(max-width:900px){.mobile-nav{display:flex!important}.landing-nav{width:calc(100% - 16px);left:50%;top:8px;height:64px;border-radius:16px}.landing-nav.is-scrolled{top:6px}.nav-inner{width:calc(100% - 20px);height:64px}.landing-nav nav{display:none}.nav-actions>.landing-button{display:none}.nav-actions{gap:5px}.landing-icon{height:40px;min-width:40px}.nav-inner>a svg{max-width:104px;height:auto}.mobile-nav{top:72px!important}.mobile-menu{display:inline-flex!important}}
+@media(max-width:420px){.nav-inner{width:calc(100% - 16px)}.nav-actions{gap:4px}.landing-icon{height:38px;min-width:38px}.landing-icon span{display:none}.nav-inner>a svg{max-width:96px}}
+
 @media(prefers-reduced-motion:reduce){.signal-card-premium,.signal-card-icon,.signal-dots button,.signal-arrow,.signal-card-premium:before{transition:none!important}}
