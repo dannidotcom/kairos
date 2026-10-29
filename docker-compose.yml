@@ -1,0 +1,155 @@
+name: kairos
+
+x-backend-env: &backend-env
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kairos:kairos@kairos-postgres:5432/kairos}
+  REDIS_URL: ${REDIS_URL:-redis://kairos-redis:6379/0}
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-kairos-jwt-secret-2026}
+  API_KEY_PEPPER: ${API_KEY_PEPPER:-dev-only-change-me-kairos-api-key-pepper-2026}
+  ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+  REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-14}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8088,http://localhost}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8088}
+  DEMO_MODE: ${DEMO_MODE:-true}
+  SEED_DEMO: ${SEED_DEMO:-true}
+  DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@kairos.app}
+  DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-KairosDemo!2026}
+  LLM_PROVIDER: ${LLM_PROVIDER:-heuristic}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://host.docker.internal:11434/v1}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-not-needed}
+  OPENAI_MODEL: ${OPENAI_MODEL:-qwen2.5:14b}
+  LINKEDIN_CONNECTOR_URL: ${LINKEDIN_CONNECTOR_URL:-}
+  LINKEDIN_CONNECTOR_TOKEN: ${LINKEDIN_CONNECTOR_TOKEN:-}
+  LINKEDIN_WEBHOOK_SECRET: ${LINKEDIN_WEBHOOK_SECRET:-dev-only-linkedin-webhook-secret}
+  PUBLIC_API_URL: http://kairos-api:8000
+  SEND_WINDOW_START: ${SEND_WINDOW_START:-8}
+  SEND_WINDOW_END: ${SEND_WINDOW_END:-19}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-backend-build: &backend-build
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  image: kairos-backend:local
+  restart: unless-stopped
+
+services:
+  kairos-postgres:
+    image: postgres:16-alpine
+    container_name: kairos-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kairos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kairos}
+      POSTGRES_DB: ${POSTGRES_DB:-kairos}
+    volumes:
+      - kairos_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kairos} -d ${POSTGRES_DB:-kairos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  kairos-redis:
+    image: redis:7-alpine
+    container_name: kairos-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - kairos_redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  kairos-api:
+    <<: *backend-build
+    container_name: kairos-api
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      <<: *backend-env
+    depends_on:
+      kairos-postgres:
+        condition: service_healthy
+      kairos-redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+
+  kairos-worker:
+    <<: *backend-build
+    container_name: kairos-worker
+    command: ["arq", "app.worker.WorkerSettings"]
+    environment:
+      <<: *backend-env
+    depends_on:
+      kairos-api:
+        condition: service_healthy
+      kairos-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  kairos-scheduler:
+    <<: *backend-build
+    container_name: kairos-scheduler
+    command: ["python", "-m", "app.scheduler"]
+    environment:
+      <<: *backend-env
+    depends_on:
+      kairos-api:
+        condition: service_healthy
+      kairos-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  kairos-mcp:
+    <<: *backend-build
+    container_name: kairos-mcp
+    command: ["uvicorn", "app.mcp_server:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      <<: *backend-env
+      PUBLIC_API_URL: http://kairos-api:8000
+    depends_on:
+      kairos-api:
+        condition: service_healthy
+    ports:
+      - "${MCP_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  kairos-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: kairos-frontend:local
+    container_name: kairos-frontend
+    depends_on:
+      kairos-api:
+        condition: service_healthy
+      kairos-mcp:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8088}:80"
+    restart: unless-stopped
+
+volumes:
+  kairos_postgres_data:
+  kairos_redis_data:

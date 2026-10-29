@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-indigo: #1E1B4B;
+  --brand-amber: #F59E0B;
+  --brand-slate: #64748B;
+  --brand-white: #FFFFFF;
+  --canvas: #F7F8FC;
+  color: #17162F;
+  background: var(--canvas);
+  font-family: Inter, Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, textarea, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+::selection { color: #1E1B4B; background: #FDE8B8; }
+:focus-visible { outline: 3px solid rgba(245, 158, 11, .42); outline-offset: 2px; }
+
+@layer components {
+  .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft; }
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200 disabled:opacity-50; }
+  .btn-primary { @apply btn bg-brand-indigo text-white hover:bg-[#292462] active:translate-y-px; }
+  .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50; }
+  .btn-ghost { @apply btn text-slate-600 hover:bg-slate-100 hover:text-brand-indigo; }
+  .input { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-100/70; }
+  .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-[.06em] text-slate-500; }
+  .badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium; }
+  .icon-btn { @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-brand-indigo; }
+  .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[.07] hover:text-white; }
+  .nav-link.active { @apply bg-white/[.1] text-white shadow-inner; }
+  .th { @apply px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400; }
+  .td { @apply px-5 py-4 text-sm; }
+}
+
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
+.scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+.text-balance { text-wrap: balance; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

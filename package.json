@@ -1,0 +1,16 @@
+{
+  "name": "kairos-brand-tools",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Kairos brand asset build pipeline",
+  "scripts": {
+    "brand": "node scripts/build-brand.mjs",
+    "brand:png": "node scripts/build-brand.mjs",
+    "brand:svg": "node scripts/build-brand.mjs"
+  },
+  "devDependencies": {
+    "fontkit": "^2.0.4",
+    "sharp": "^0.34.3"
+  }
+}

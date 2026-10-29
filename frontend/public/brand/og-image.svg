@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-labelledby="kairos-og-title kairos-og-desc">
+  <title id="kairos-og-title">Kairos — Le bon message, au bon moment.</title>
+  <desc id="kairos-og-desc">Logo Kairos centré sur fond indigo, avec le slogan français Le bon message, au bon moment.</desc>
+  <defs>
+    <path id="og-l" d="M2 0V24H18"/>
+    <path id="og-e" d="M18 0H2V24H18M2 12H15"/>
+    <path id="og-b" d="M2 24V0H10C16 0 18 2 18 6C18 10 15 12 10 12H2M10 12C16 12 19 14 19 18C19 22 16 24 10 24H2"/>
+    <path id="og-o" d="M10 0C4 0 1 4 1 12S4 24 10 24S19 20 19 12S16 0 10 0Z"/>
+    <path id="og-n" d="M2 24V0L18 24V0"/>
+    <path id="og-m" d="M1 24V0L10 13L19 0V24"/>
+    <path id="og-a" d="M1 24L10 0L19 24M5 15H15"/>
+    <path id="og-s" d="M18 3C15 0 5-1 2 4C-2 10 4 11 10 12C17 13 20 15 18 20C16 25 6 25 1 21"/>
+    <path id="og-g" d="M18 4C15 0 6-1 2 4C-1 8 0 18 3 21C7 25 15 24 19 20V13H11"/>
+    <path id="og-u" d="M2 0V16C2 22 5 24 10 24S18 22 18 16V0"/>
+    <path id="og-t" d="M0 0H20M10 0V24"/>
+    <path id="og-comma" d="M4 23L2 29"/>
+    <path id="og-period" d="M3 24H3.01"/>
+  </defs>
+  <rect width="1200" height="630" fill="#1E1B4B"/>
+  <g fill="none" stroke="#64748B" stroke-width="1.5">
+    <circle cx="600" cy="270" r="228" opacity=".28"/>
+    <circle cx="600" cy="270" r="178" opacity=".18"/>
+  </g>
+  <circle cx="600" cy="42" r="4" fill="#F59E0B"/>
+  <g transform="translate(289 174) scale(2)">
+    <g transform="translate(8 8)">
+      <rect x="9" y="8" width="9" height="48" rx="4.5" fill="#F8FAFC"/>
+      <path d="M45 10 23 32 45 54" fill="none" stroke="#F8FAFC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20.5" cy="32" r="5.5" fill="#F59E0B"/>
+    </g>
+    <g transform="translate(82 17) scale(.88)" fill="#F8FAFC">
+      <path d="M0 0H8V20L27 0H38L16 23L39 48H28L8 27V48H0Z"/>
+      <path fill-rule="evenodd" d="M75 15C64 15 56 22 56 32C56 42 64 49 74 49C79 49 84 47 87 44V48H95V16H87V20C84 17 80 15 75 15ZM75 23C82 23 87 26 87 32C87 38 82 41 75 41C69 41 64 38 64 32C64 26 69 23 75 23Z"/>
+      <path d="M104 15H112V23H104ZM104 27H112V48H104Z"/>
+      <path d="M124 16H132V21C136 17 141 15 148 16V25C138 24 132 28 132 36V48H124Z"/>
+      <path fill-rule="evenodd" d="M176 15C165 15 157 22 157 32C157 42 165 49 176 49C187 49 195 42 195 32C195 22 187 15 176 15ZM176 23C183 23 187 26 187 32C187 38 183 41 176 41C169 41 165 38 165 32C165 26 169 23 176 23Z"/>
+      <path d="M233 19C229 16 224 15 219 15C210 15 204 19 204 25C204 31 209 33 218 35C225 36 228 37 228 40C228 43 224 44 220 44C214 44 209 42 205 39L201 45C206 49 212 51 220 51C230 51 236 47 236 40C236 33 231 30 221 28C215 27 212 26 212 24C212 22 215 21 219 21C224 21 228 23 231 25Z"/>
+    </g>
+  </g>
+  <g transform="translate(220 404)" fill="none" stroke="#F8FAFC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="LE BON MESSAGE, AU BON MOMENT.">
+    <use href="#og-l" x="0"/>
+    <use href="#og-e" x="28"/>
+    <use href="#og-b" x="76"/>
+    <use href="#og-o" x="104"/>
+    <use href="#og-n" x="132"/>
+    <use href="#og-m" x="180"/>
+    <use href="#og-a" x="208"/>
+    <use href="#og-s" x="236"/>
+    <use href="#og-s" x="264"/>
+    <use href="#og-a" x="292"/>
+    <use href="#og-g" x="320"/>
+    <use href="#og-e" x="348"/>
+    <use href="#og-comma" x="376"/>
+    <use href="#og-a" x="408"/>
+    <use href="#og-u" x="436"/>
+    <use href="#og-b" x="484"/>
+    <use href="#og-o" x="512"/>
+    <use href="#og-n" x="540"/>
+    <use href="#og-m" x="588"/>
+    <use href="#og-o" x="616"/>
+    <use href="#og-m" x="644"/>
+    <use href="#og-e" x="672"/>
+    <use href="#og-n" x="700"/>
+    <use href="#og-t" x="728"/>
+    <use href="#og-period" x="756"/>
+  </g>
+  <rect x="576" y="478" width="48" height="3" rx="1.5" fill="#F59E0B"/>
+</svg>

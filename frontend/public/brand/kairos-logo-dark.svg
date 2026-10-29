@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 304 80" width="304" height="80" role="img" aria-labelledby="kairos-logo-dark-title">
+  <title id="kairos-logo-dark-title">Kairos — logo pour fond sombre</title>
+  <g transform="translate(8 8)">
+    <rect x="9" y="8" width="9" height="48" rx="4.5" fill="#F8FAFC"/>
+    <path d="M45 10 23 32 45 54" fill="none" stroke="#F8FAFC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="20.5" cy="32" r="5.5" fill="#F59E0B"/>
+  </g>
+  <g transform="translate(82 17) scale(.88)" fill="#F8FAFC">
+    <path d="M0 0H8V20L27 0H38L16 23L39 48H28L8 27V48H0Z"/>
+    <path fill-rule="evenodd" d="M75 15C64 15 56 22 56 32C56 42 64 49 74 49C79 49 84 47 87 44V48H95V16H87V20C84 17 80 15 75 15ZM75 23C82 23 87 26 87 32C87 38 82 41 75 41C69 41 64 38 64 32C64 26 69 23 75 23Z"/>
+    <path d="M104 15H112V23H104ZM104 27H112V48H104Z"/>
+    <path d="M124 16H132V21C136 17 141 15 148 16V25C138 24 132 28 132 36V48H124Z"/>
+    <path fill-rule="evenodd" d="M176 15C165 15 157 22 157 32C157 42 165 49 176 49C187 49 195 42 195 32C195 22 187 15 176 15ZM176 23C183 23 187 26 187 32C187 38 183 41 176 41C169 41 165 38 165 32C165 26 169 23 176 23Z"/>
+    <path d="M233 19C229 16 224 15 219 15C210 15 204 19 204 25C204 31 209 33 218 35C225 36 228 37 228 40C228 43 224 44 220 44C214 44 209 42 205 39L201 45C206 49 212 51 220 51C230 51 236 47 236 40C236 33 231 30 221 28C215 27 212 26 212 24C212 22 215 21 219 21C224 21 228 23 231 25Z"/>
+  </g>
+</svg>
