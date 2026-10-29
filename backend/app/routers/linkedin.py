@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.db import get_session
 from app.dependencies import AuthContext, get_auth_context
-from app.models import Lead, LinkedInAccount
+from app.models import Lead, LinkedInAccount, LinkedInWebhookEvent
 from app.schemas import (
     AccountConnectRequest,
     AccountRead,
@@ -160,7 +160,7 @@ async def usage(ctx: AuthContext = Depends(get_auth_context), session: AsyncSess
             select(LinkedInAccount)
             .where(
                 LinkedInAccount.organization_id == ctx.org_id,
-                LinkedInAccount.status.in_(("connected", "warming")),
+                LinkedInAccount.status.in_("connected", "warming"),
             )
             .order_by(LinkedInAccount.created_at.asc())
             .limit(1)
@@ -189,7 +189,9 @@ async def linkedin_webhook(
         x_kairos_webhook_secret, settings.linkedin_webhook_secret
     ):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
-    event = payload.get("event")
+    event = payload.get("event") or payload.get("type")
+    if not event:
+        raise HTTPException(status_code=422, detail="event is required")
     try:
         account_id = UUID(str(payload["account_id"]))
     except (KeyError, ValueError):
@@ -197,6 +199,29 @@ async def linkedin_webhook(
     account = await session.get(LinkedInAccount, account_id)
     if account is None:
         raise HTTPException(status_code=404, detail="LinkedIn account not found")
+
+    event_id = str(payload.get("event_id") or payload.get("id") or payload.get("webhook_id") or f"{account_id}:{event}:{datetime.now(timezone.utc).isoformat()}")
+    existing = (
+        await session.execute(
+            select(LinkedInWebhookEvent).where(
+                LinkedInWebhookEvent.organization_id == account.organization_id,
+                LinkedInWebhookEvent.event_id == event_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return {"ok": True, "duplicate": True, "event_id": event_id}
+
+    webhook_record = LinkedInWebhookEvent(
+        organization_id=account.organization_id,
+        account_id=account.id,
+        event_id=event_id,
+        event_type=str(event),
+        payload=payload,
+    )
+    session.add(webhook_record)
+    await session.flush()
+
     provider = provider_for_account(account)
     profile_url = normalize_lead_url(str(payload.get("profile_url", "")))
     lead = (
@@ -207,7 +232,7 @@ async def linkedin_webhook(
             )
         )
     ).scalar_one_or_none()
-    if lead is None:
+    if lead is None and profile_url:
         raise HTTPException(status_code=404, detail="Lead not found for this profile")
 
     from app.services.campaign import mark_connection_accepted, record_inbound_reply
@@ -226,9 +251,12 @@ async def linkedin_webhook(
             account=account,
             lead=lead,
             body=body,
-            sender_name=message.get("sender_name") or lead.full_name,
+            sender_name=message.get("sender_name") or (lead.full_name if lead else account.display_name),
             external_id=message.get("id"),
         )
         await session.commit()
         return {"ok": True, "conversation_id": str(conversation.id)}
+    if event in {"account_connected", "account_disconnected", "credentials_expired", "invitation_accepted", "new_message_received"}:
+        await session.commit()
+        return {"ok": True, "processed": True, "event": event, "provider": provider.name}
     raise HTTPException(status_code=422, detail="Unsupported event")

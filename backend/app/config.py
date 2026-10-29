@@ -53,11 +53,20 @@ class Settings(BaseSettings):
     linkedin_connector_token: str = ""
     linkedin_webhook_secret: str = "change-me-linkedin-webhook-secret"
 
+    unipile_base_url: str = ""
+    unipile_dsn: str = ""
+    unipile_api_key: str = ""
+    unipile_timeout_seconds: float = 20.0
+    unipile_max_retries: int = 5
+
     default_timezone: str = "Europe/Paris"
     send_window_start: int = 8
     send_window_end: int = 19
     demo_auto_replies: bool = True
     min_outbound_interval_seconds: int = 45
+    scheduler_run_actions_interval_seconds: int = 60
+    scheduler_run_enrollments_interval_seconds: int = 300
+    scheduler_run_sync_accounts_interval_seconds: int = 900
 
     sentry_dsn: str = ""
     posthog_key: str = ""

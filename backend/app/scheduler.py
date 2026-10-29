@@ -51,7 +51,10 @@ async def main() -> None:
         except Exception as exc:  # noqa: BLE001 - scheduler must survive Redis blips
             logger.warning("Scheduler tick failed: %s", exc)
         try:
-            await asyncio.wait_for(stop.wait(), timeout=30)
+            await asyncio.wait_for(
+                stop.wait(),
+                timeout=max(1, min(60, settings.scheduler_run_actions_interval_seconds)),
+            )
         except TimeoutError:
             pass
     await pool.aclose()
