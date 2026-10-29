@@ -12,6 +12,7 @@ import UniboxPage from './pages/UniboxPage';
 import IcpPage from './pages/IcpPage';
 import SettingsPage from './pages/SettingsPage';
 import BrandPage from './pages/BrandPage';
+import DesignSystemPage from './pages/DesignSystemPage';
 import InvitePage from './pages/InvitePage';
 import { PageLoader } from './components/UI';
 
@@ -22,6 +23,7 @@ export default function App() {
     <Route path="/mentions-legales" element={<LegalPage type="legal" />} />
     <Route path="/privacy" element={<LegalPage type="privacy" />} />
     <Route path="/terms" element={<LegalPage type="terms" />} />
+    {import.meta.env.DEV && <Route path="/dev/design-system" element={<DesignSystemPage />} />}
     <Route path="/login" element={<LoginPage />} />
     <Route path="/invite/:token" element={<InvitePage />} />
     <Route path="/app" element={<Protected />}>
