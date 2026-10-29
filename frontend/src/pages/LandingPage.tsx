@@ -73,16 +73,17 @@ function SignalsSection({ t, locale }: { t: LocaleCopy; locale: 'fr' | 'en' }) {
     return <section className="section signals-section" id="signals" aria-labelledby="signals-heading">
         <div className="landing-container">
             <div className="signals-header">
-                <div className="section-heading"><span>03</span><h2 id="signals-heading">{t.signalsTitle}</h2></div>
+                <div className="section-heading"><span>03</span><div><p className="signals-eyebrow">{fr ? 'Contexte commercial' : 'Commercial context'}</p><h2 id="signals-heading">{t.signalsTitle}</h2></div></div>
                 <div className="signal-counter" aria-live="polite"><strong>{String(active + 1).padStart(2, '0')}</strong><span>/ 11</span></div>
             </div>
             <div className="signal-stage">
-                <aside className="signal-intro" data-reveal>
+                <motion.aside key={active} className="signal-intro" data-reveal initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .38, ease: [.22, 1, .36, 1] }}>
+                    <div className="signal-intro-mark"><Radar size={18} /><span>{String(active + 1).padStart(2, '0')}</span></div>
                     <p className="signal-kicker">{fr ? 'Un contexte vérifiable, pas une supposition.' : 'Verified context, not guesswork.'}</p>
                     <h3>{details[active][0]}</h3>
                     <p>{details[active][1]}</p>
                     <div className="signal-example"><span>{fr ? 'Signal détecté' : 'Detected signal'}</span><p>{details[active][2]}</p></div>
-                </aside>
+                </motion.aside>
                 <div className="signal-track-shell">
                     <div ref={trackRef} className="signal-track" onScroll={(event) => {
                         const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('.signal-card-premium'));
@@ -91,7 +92,7 @@ function SignalsSection({ t, locale }: { t: LocaleCopy; locale: 'fr' | 'en' }) {
                         cards.forEach((card, index) => { const cardCenter = card.offsetLeft + card.clientWidth / 2; const current = Math.abs(cardCenter - center); if (current < distance) { distance = current; nearest = index; } });
                         setActive(nearest);
                     }}>
-                        {t.signals.map((signal, i) => { const Icon = icons[i] || Zap; const [heading, explanation] = details[i]; return <motion.article key={signal} className={`signal-card-premium ${active === i ? 'is-active' : ''}`} whileHover={{ y: -6 }} onClick={() => select(i)} aria-label={`${i + 1}. ${signal}`}><div className="signal-card-top"><span>{String(i + 1).padStart(2, '0')}</span><div className="signal-card-icon"><Icon /></div></div><div className="signal-card-body"><p>{heading}</p><h3>{signal}</h3><span>{explanation}</span></div><div className="signal-card-foot"><Radar size={13} /><span>{fr ? 'Poids configurable' : 'Configurable weight'}</span></div></motion.article>; })}
+                        {t.signals.map((signal, i) => { const Icon = icons[i] || Zap; const [heading, explanation] = details[i]; return <motion.article key={signal} role="button" tabIndex={0} className={`signal-card-premium ${active === i ? 'is-active' : ''}`} whileHover={{ y: -6 }} onClick={() => select(i)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(i); } }} aria-label={`${i + 1}. ${signal}`} aria-pressed={active === i}><div className="signal-card-top"><span>{String(i + 1).padStart(2, '0')}</span><div className="signal-card-icon"><Icon /></div></div><div className="signal-card-body"><p>{heading}</p><h3>{signal}</h3><span>{explanation}</span></div><div className="signal-card-foot"><Radar size={13} /><span>{fr ? 'Poids configurable' : 'Configurable weight'}</span></div></motion.article>; })}
                     </div>
                     <div className="signal-controls">
                         <button type="button" className="signal-arrow" onClick={() => select(Math.max(0, active - 1))} disabled={active === 0} aria-label={fr ? 'Signal précédent' : 'Previous signal'}>←</button>
